@@ -1,0 +1,6 @@
+# /usr/bin/ati-powermode.sh
+# Called when the user connects ac power to us
+#
+
+event=ac_adapter
+action=/usr/bin/ati-powermode.sh

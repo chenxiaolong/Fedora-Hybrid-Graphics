@@ -1,0 +1,78 @@
+README for AMD's Linux fglrx drivers, as packaged by rpmfusion.org.
+
+
+1. After Installation
+-----------------------------
+
+The easiest way to start using the fglrx drivers after installation is to
+restart your system.
+
+The hard way depends on your hardware and your configuration:
+
+Check if you have loaded the module "radeon". If not simply log out of your
+X session to restart X -- the catalyst driver should now be loaded if there is
+a proper kernel-module installed. You can also run:
+    modprobe fglrx
+to force the fglrx kernel module to load.
+
+If you have loaded the radeon driver, log out of your X session, log in again
+and issue the command:
+    /sbin/rmmod radeon
+then end your X session once again.
+
+To check that hardware acceleration is working, issue the following command
+in a terminal:
+    glxinfo | grep "OpenGL vendor"
+That should print out
+    OpenGL vendor string: ATI Technologies Inc.
+
+Also, the command
+    glxinfo | grep direct
+should print out
+    direct rendering: Yes
+If it does, you're all set.
+
+
+2. Basic Configuration
+-----------------------------
+
+The installation scripts perform the basic configuration for you.
+When (if) you uninstall the drivers, the configuration is reset to
+use the default autodetected driver again. If you want to temporarily disable
+the fglrx drivers without uninstalling, look inside /etc/X11/xorg.conf.d and
+backup any files with a filename matching the pattern XY-catalyst-* and then
+restart your X session. To re-enable the drivers, replace these files to their
+original state.
+
+
+3. Additional configuration
+----------------------------------
+
+For configuration options (TwinView, TV-out etc) see
+/usr/share/doc/fglrx-*/index.html
+
+
+4. Kernel Module
+-----------------------------
+
+The fglrx kernel module is required for DRI. For Fedora kernels you will find
+RPMs with the name:
+    kmod-catalyst-$(uname -r)-(ati-version)-fc(releasever).(arch).rpm
+    (e.g. kmod-catalyst-2.6.27.19-170.2.35.fc10.x86_64-9.4-1.fc10.x86_64)
+at rpmfusion.org. If you use another kernel, grab the proper SRPM:
+    (e.g catalyst-kmod-9.4.fc10.src.rpm)
+from rpmfusion.org and rebuild the kernel module with the following command:
+    rpmbuild --rebuild /path/to/catalyst-srpm.src.rpm
+
+
+5. Release-specific notes
+-----------------------------
+
+Please note that this release was not written to run correctly on the Xorg
+server version included with Fedora 16 and will likely fail to operate correctly
+with most, if not all, graphic cards.
+
+During testing it was found that in some cases, kernel modesetting may need to
+disabled in order for the fglrx driver to function correctly. You may want to
+edit /etc/grub2.cfg manually and add the 'nomodeset' kernel parameter.
+

@@ -1,0 +1,6 @@
+# /usr/bin/ati-powermode.sh
+# Called when the user opens/closes the laptop lid
+#
+
+event=button[ /]lid
+action=/usr/bin/ati-powermode.sh
