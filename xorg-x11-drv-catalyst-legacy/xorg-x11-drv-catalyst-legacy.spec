@@ -12,7 +12,8 @@ Group:           User Interface/X Hardware Support
 License:         Redistributable, no modification permitted
 URL:             http://www.ati.com/support/drivers/linux/radeon-linux.html
 Source0:         http://www2.ati.com/drivers/legacy/amd-driver-installer-catalyst-%{version}-legacy-linux-x86.x86_64.zip
-Source1:         http://developer.amd.com/downloads/xvba-sdk-0.74-404001.tar.gz
+# Thanks to crondog for the new link: https://aur.archlinux.org/packages/xvba-sdk/
+Source1:         http://developer.amd.com.php53-23.ord1-1.websitetestlink.com/wordpress/media/2012/10/xvba-sdk-0.74-404001.tar.gz
 Source2:         catalyst-legacy-README.Fedora
 Source3:         amdcccle.desktop
 Source4:         catalyst-legacy-atieventsd.init
