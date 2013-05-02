@@ -6,7 +6,7 @@
 %global    __strip /bin/true
 Name:            xorg-x11-drv-catalyst-legacy
 Version:         13.1
-Release:         2.hybridgfx%{?dist}
+Release:         2.hybridgfx.1%{?dist}
 Summary:         AMD's proprietary driver for ATI legacy graphic cards
 Group:           User Interface/X Hardware Support
 License:         Redistributable, no modification permitted
@@ -288,9 +288,9 @@ desktop-file-install --vendor rpmfusion \
 
 # Install static driver dependant configuration files
 install -m 0755 -d $RPM_BUILD_ROOT%{_sysconfdir}/X11/xorg.conf.d/
-install -pm 0644 %{SOURCE8} $RPM_BUILD_ROOT%{_sysconfdir}/X11/modulepath.catalyst-legacy.conf
-sed -i -e 's|@LIBDIR@|%{_libdir}|g' $RPM_BUILD_ROOT%{_sysconfdir}/X11/modulepath.catalyst-legacy.conf
-touch -r %{SOURCE8} $RPM_BUILD_ROOT%{_sysconfdir}/X11/modulepath.catalyst-legacy.conf
+install -pm 0644 %{SOURCE8} $RPM_BUILD_ROOT%{_sysconfdir}/X11/modulepath.fglrx.conf
+sed -i -e 's|@LIBDIR@|%{_libdir}|g' $RPM_BUILD_ROOT%{_sysconfdir}/X11/modulepath.fglrx.conf
+touch -r %{SOURCE8} $RPM_BUILD_ROOT%{_sysconfdir}/X11/modulepath.fglrx.conf
 
 # Fix odd perms
 find fglrxpkg -type f -perm 0555 -exec chmod 0755 '{}' \;
@@ -309,12 +309,12 @@ install -m 0755 -d $RPM_BUILD_ROOT%{_prefix}/lib/modprobe.d/
 install -p -m 0644 %{SOURCE10} $RPM_BUILD_ROOT%{_prefix}/lib/modprobe.d/
 
 # Allow hybrid-detect package to add hybrid graphics functionality
-install -m 0755 -d    $RPM_BUILD_ROOT%{_datadir}/catalyst-legacy/
-echo "%{atilibdir}" > $RPM_BUILD_ROOT%{_datadir}/catalyst-legacy/catalyst-legacy-%{_lib}.conf
+install -m 0755 -d    $RPM_BUILD_ROOT%{_datadir}/fglrx/
+echo "%{atilibdir}" > $RPM_BUILD_ROOT%{_datadir}/fglrx/fglrx-%{_lib}.conf
 
 # For update-alternatives
 install -m 0755 -d $RPM_BUILD_ROOT%{_sysconfdir}/ld.so.conf.d/
-touch              $RPM_BUILD_ROOT%{_sysconfdir}/ld.so.conf.d/catalyst-legacy-%{_lib}.conf
+touch              $RPM_BUILD_ROOT%{_sysconfdir}/ld.so.conf.d/fglrx-%{_lib}.conf
 
 # Alternative for Xorg configuration file
 install -m 0755 -d $RPM_BUILD_ROOT%{_sysconfdir}/X11/xorg.conf.d/
@@ -330,7 +330,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_sbindir}/update-alternatives --install \
   %{_sysconfdir}/X11/xorg.conf.d/00-gfx.conf \
   00-gfx.conf \
-  %{_sysconfdir}/X11/modulepath.catalyst-legacy.conf \
+  %{_sysconfdir}/X11/modulepath.fglrx.conf \
   10
 
 # Update the user's version numbers in the AMD Control Center.
@@ -363,9 +363,9 @@ rm -f %{_sysconfdir}/ld.so.conf.d/catalyst-legacy-%{_lib}.conf
 
 # Install default alternatives for libraries
 %{_sbindir}/update-alternatives --install \
-  %{_sysconfdir}/ld.so.conf.d/catalyst-legacy-%{_lib}.conf \
-  catalyst-legacy-%{_lib}.conf \
-  %{_datadir}/catalyst-legacy/catalyst-legacy-%{_lib}.conf \
+  %{_sysconfdir}/ld.so.conf.d/fglrx-%{_lib}.conf \
+  fglrx-%{_lib}.conf \
+  %{_datadir}/fglrx/fglrx-%{_lib}.conf \
   10
 
 /sbin/ldconfig
@@ -374,7 +374,7 @@ rm -f %{_sysconfdir}/ld.so.conf.d/catalyst-legacy-%{_lib}.conf
 # Remove alternative
 %{_sbindir}/update-alternatives --remove \
   00-gfx.conf \
-  %{_sysconfdir}/X11/modulepath.catalyst-legacy.conf
+  %{_sysconfdir}/X11/modulepath.fglrx.conf
 
 if [ "${1}" -eq 0 ]; then
   /sbin/service atieventsd stop >/dev/null 2>&1
@@ -389,8 +389,8 @@ fi ||:
 %postun libs
 # Remove alternative
 %{_sbindir}/update-alternatives --remove \
-  catalyst-legacy-%{_lib}.conf \
-  %{_datadir}/catalyst-legacy/catalyst-legacy-%{_lib}.conf
+  fglrx-%{_lib}.conf \
+  %{_datadir}/fglrx/fglrx-%{_lib}.conf
 
 /sbin/ldconfig
 
@@ -400,7 +400,7 @@ fi ||:
 %dir %{_sysconfdir}/ati/
 %doc %{_docdir}/amdcccle/ccc_copyrights.txt
 %config(noreplace) %{_sysconfdir}/security/console.apps/amdcccle-su
-%config %{_sysconfdir}/X11/modulepath.catalyst-legacy.conf
+%config %{_sysconfdir}/X11/modulepath.fglrx.conf
 %{_prefix}/lib/modprobe.d/blacklist-radeon.conf
 %{_sysconfdir}/ati/atiogl.xml
 %{_sysconfdir}/ati/logo.xbm.example
@@ -439,9 +439,9 @@ fi ||:
 %{_libdir}/dri/
 
 # For update-alternatives
-%ghost %{_sysconfdir}/ld.so.conf.d/catalyst-legacy-%{_lib}.conf
-%{_datadir}/catalyst-legacy/catalyst-legacy-%{_lib}.conf
-%dir %{_datadir}/catalyst-legacy/
+%ghost %{_sysconfdir}/ld.so.conf.d/fglrx-%{_lib}.conf
+%{_datadir}/fglrx/fglrx-%{_lib}.conf
+%dir %{_datadir}/fglrx/
 
 %files devel
 %defattr(-,root,root,-)
@@ -459,6 +459,11 @@ fi ||:
 
 
 %changelog
+* Wed May 01 2013 Xiao-Long Chen <chenxiaolong@cxl.epac.to> - 13.1-2.hybridgfx.1
+- Use 'fglrx' instead of 'catalyst-legacy' for paths that use the alternatives
+  system
+  - I won't need to hardcode 'catalyst' and 'catalyst-legacy' in hybrid-detect
+
 * Tue Apr 30 2013 Xiao-Long Chen <chenxiaolong@cxl.epac.to> - 13.1-2.hybridgfx
 - Add hacky hybrid graphics support using alternatives
 
