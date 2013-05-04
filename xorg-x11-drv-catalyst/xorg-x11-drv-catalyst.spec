@@ -1,25 +1,26 @@
 %global          atilibdir       %{_libdir}/catalyst
+%global          atixorgdir      %{_libdir}/catalyst/xorg
 %global          amdrun          amd-driver-installer-catalyst-13.1-linux-x86.x86_64.run
 %global    debug_package %{nil}
 
 %global    __strip /bin/true
 Name:            xorg-x11-drv-catalyst
 Version:         13.1
-Release:         1%{?dist}
+Release:         1.hybridgfx.1%{?dist}
 Summary:         AMD's proprietary driver for ATI graphic cards
 Group:           User Interface/X Hardware Support
 License:         Redistributable, no modification permitted
 URL:             http://www.ati.com/support/drivers/linux/radeon-linux.html
 Source0:         http://www2.ati.com/drivers/linux/amd-driver-installer-catalyst-13.1-linux-x86.x86_64.zip
-Source1:         http://developer.amd.com/downloads/xvba-sdk-0.74-404001.tar.gz
+# Thanks to crondog for the new link: https://aur.archlinux.org/packages/xvba-sdk/
+Source1:         http://developer.amd.com.php53-23.ord1-1.websitetestlink.com/wordpress/media/2012/10/xvba-sdk-0.74-404001.tar.gz
 Source2:         catalyst-README.Fedora
 Source3:         amdcccle.desktop
 Source4:         catalyst-atieventsd.init
 Source5:         catalyst-ati-powermode.sh
 Source6:         catalyst-a-ac-aticonfig
 Source7:         catalyst-a-lid-aticonfig
-Source8:         00-catalyst-modulepath.conf
-Source9:         01-catalyst-videodriver.conf
+Source8:         00-catalyst.conf
 Source10:        blacklist-radeon.conf
 
 BuildRoot:       %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -47,6 +48,11 @@ Requires:        %{name}-libs-%{_target_cpu} = %{version}-%{release}
 Requires(post):  chkconfig
 
 Requires(preun): chkconfig
+
+Requires(post):  %{_sbindir}/update-alternatives
+Requires(postun): %{_sbindir}/update-alternatives
+
+Provides:        fglrx-hybrid-drivers%{_isa}
 
 Provides:        catalyst-kmod-common = %{version}
 Conflicts:       xorg-x11-drv-nvidia
@@ -103,6 +109,9 @@ Group:           User Interface/X Hardware Support
 Requires:        %{name} = %{version}-%{release}
 Requires(post):  ldconfig
 Provides:        %{name}-libs-%{_target_cpu} = %{version}-%{release}
+
+Requires(post):  %{_sbindir}/update-alternatives
+Requires(postun): %{_sbindir}/update-alternatives
 
 %description libs
 This package provides the shared libraries for %{name}.
@@ -166,10 +175,10 @@ do
     install -D -p -m 0755 fglrxpkg/${file} $RPM_BUILD_ROOT/%{_prefix}/%{_lib}/dri/${file##./usr/X11R6/%{_lib}/modules/dri}
   elif [[ ! "/${file##./usr/X11R6/%{_lib}/modules/extensions/fglrx}" = "/${file}" ]]
   then
-    install -D -p -m 0755 fglrxpkg/${file} $RPM_BUILD_ROOT/%{_libdir}/xorg/modules/extensions/catalyst/${file##./usr/X11R6/%{_lib}/modules/extensions/fglrx}
+    install -D -p -m 0755 fglrxpkg/${file} $RPM_BUILD_ROOT/%{atixorgdir}/${file##./usr/X11R6/%{_lib}/modules/extensions/fglrx}
   elif [[ ! "/${file##./usr/X11R6/%{_lib}/modules/extensions}" = "/${file}" ]]
   then
-    install -D -p -m 0755 fglrxpkg/${file} $RPM_BUILD_ROOT/%{_libdir}/xorg/modules/extensions/catalyst/${file##./usr/X11R6/%{_lib}/modules/extensions}
+    install -D -p -m 0755 fglrxpkg/${file} $RPM_BUILD_ROOT/%{atixorgdir}/${file##./usr/X11R6/%{_lib}/modules/extensions}
   elif [[ ! "/${file##./usr/X11R6/%{_lib}/modules}" = "/${file}" ]]
   then
     install -D -p -m 0755 fglrxpkg/${file} $RPM_BUILD_ROOT/%{_libdir}/xorg/modules/${file##./usr/X11R6/%{_lib}/modules}
@@ -237,7 +246,7 @@ rm -rf $RPM_BUILD_ROOT%{atilibdir}/libSlotMaximizerBe.so
 
 # Remove some 'fglrx-' prefixes
 mv $RPM_BUILD_ROOT%{atilibdir}/{fglrx-,}libGL.so.1.2
-mv $RPM_BUILD_ROOT%{_libdir}/xorg/modules/extensions/catalyst/{fglrx-,}libglx.so
+mv $RPM_BUILD_ROOT%{atixorgdir}/{fglrx-,}libglx.so
 
 # Move XvBA data file to correct location
 mkdir -p $RPM_BUILD_ROOT%{_prefix}/lib
@@ -272,11 +281,10 @@ desktop-file-install --vendor rpmfusion \
     %{SOURCE3}
 
 # Install static driver dependant configuration files
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/X11/xorg.conf.d
-install -pm 0644 %{SOURCE8} $RPM_BUILD_ROOT%{_sysconfdir}/X11/xorg.conf.d
-sed -i -e 's|@LIBDIR@|%{_libdir}|g' $RPM_BUILD_ROOT%{_sysconfdir}/X11/xorg.conf.d/00-catalyst-modulepath.conf
-touch -r %{SOURCE8} $RPM_BUILD_ROOT%{_sysconfdir}/X11/xorg.conf.d/00-catalyst-modulepath.conf
-install -pm 0644 %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/X11/xorg.conf.d
+install -m 0755 -d $RPM_BUILD_ROOT%{_sysconfdir}/X11/xorg.conf.d/
+install -pm 0644 %{SOURCE8} $RPM_BUILD_ROOT%{_sysconfdir}/X11/modulepath.fglrx.conf
+sed -i -e 's|@LIBDIR@|%{_libdir}|g' $RPM_BUILD_ROOT%{_sysconfdir}/X11/modulepath.fglrx.conf
+touch -r %{SOURCE8} $RPM_BUILD_ROOT%{_sysconfdir}/X11/modulepath.fglrx.conf
 
 # Fix odd perms
 find fglrxpkg -type f -perm 0555 -exec chmod 0755 '{}' \;
@@ -290,19 +298,35 @@ chmod 755 $RPM_BUILD_ROOT/%{_sysconfdir}/ati/*.sh
 chrpath --delete $RPM_BUILD_ROOT%{_bindir}/amdcccle
 chrpath --delete $RPM_BUILD_ROOT%{_sbindir}/amdnotifyui
 
-# ld.so.conf.d file
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/ld.so.conf.d
-echo "%{atilibdir}" > $RPM_BUILD_ROOT%{_sysconfdir}/ld.so.conf.d/catalyst-%{_lib}.conf
-
 #Blacklist radeon
 install    -m 0755 -d         $RPM_BUILD_ROOT%{_prefix}/lib/modprobe.d/
 install -p -m 0644 %{SOURCE10} $RPM_BUILD_ROOT%{_prefix}/lib/modprobe.d/
+
+# Allow hybrid-detect package to add hybrid graphics functionality
+install -m 0755 -d    $RPM_BUILD_ROOT%{_datadir}/fglrx/
+echo "%{atilibdir}" > $RPM_BUILD_ROOT%{_datadir}/fglrx/fglrx-%{_lib}.conf
+
+# For update-alternatives
+install -m 0755 -d $RPM_BUILD_ROOT%{_sysconfdir}/ld.so.conf.d/
+touch              $RPM_BUILD_ROOT%{_sysconfdir}/ld.so.conf.d/fglrx-%{_lib}.conf
+
+# Alternative for Xorg configuration file
+install -m 0755 -d $RPM_BUILD_ROOT%{_sysconfdir}/X11/xorg.conf.d/
+touch              $RPM_BUILD_ROOT%{_sysconfdir}/X11/xorg.conf.d/00-gfx.conf
+
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 
 %post
+# Install default alternative for Xorg configuration file
+%{_sbindir}/update-alternatives --install \
+  %{_sysconfdir}/X11/xorg.conf.d/00-gfx.conf \
+  00-gfx.conf \
+  %{_sysconfdir}/X11/modulepath.fglrx.conf \
+  10
+
 # Update the user's version numbers in the AMD Control Center.
 if [ -f %{_sysconfdir}/amdpcsdb ];then
   ReleaseVersion=$(sed '/ReleaseVersion=S/!d; s/ReleaseVersion=S//' %{_sysconfdir}/ati/amdpcsdb.default 2>/dev/null)
@@ -327,9 +351,25 @@ if [ "${1}" -eq 1 ]; then
   fi
 fi ||:
 
-%post libs -p /sbin/ldconfig
+%post libs
+# Ensure that the old ldconfig configuration file is removed
+rm -f %{_sysconfdir}/ld.so.conf.d/catalyst-%{_lib}.conf
+
+# Install default alternatives for libraries
+%{_sbindir}/update-alternatives --install \
+  %{_sysconfdir}/ld.so.conf.d/fglrx-%{_lib}.conf \
+  fglrx-%{_lib}.conf \
+  %{_datadir}/fglrx/fglrx-%{_lib}.conf \
+  10
+
+/sbin/ldconfig
 
 %preun
+# Remove alternative
+%{_sbindir}/update-alternatives --remove \
+  00-gfx.conf \
+  %{_sysconfdir}/X11/modulepath.fglrx.conf
+
 if [ "${1}" -eq 0 ]; then
   /sbin/service atieventsd stop >/dev/null 2>&1
   /sbin/chkconfig --del atieventsd
@@ -340,7 +380,13 @@ if [ "${1}" -eq 0 ]; then
   fi
 fi ||:
 
-%postun libs -p /sbin/ldconfig
+%postun libs
+# Remove alternative
+%{_sbindir}/update-alternatives --remove \
+  fglrx-%{_lib}.conf \
+  %{_datadir}/fglrx/fglrx-%{_lib}.conf
+
+/sbin/ldconfig
 
 %files
 %defattr(-,root,root,-)
@@ -349,7 +395,7 @@ fi ||:
 %doc %{_docdir}/amdcccle/ccc_copyrights.txt
 %config(noreplace) %{_sysconfdir}/security/console.apps/amdcccle-su
 %config(noreplace) %{_prefix}/lib/modprobe.d/blacklist-radeon.conf
-%config %{_sysconfdir}/X11/xorg.conf.d/*catalyst*.conf
+%config %{_sysconfdir}/X11/modulepath.fglrx.conf
 %{_sysconfdir}/ati/atiogl.xml
 %{_sysconfdir}/ati/atiapfxx.blb
 %{_sysconfdir}/ati/logo.xbm.example
@@ -371,7 +417,7 @@ fi ||:
 # no_multilib
 %{_libdir}/xorg/modules/drivers/fglrx_drv.so
 %{_libdir}/xorg/modules/linux/libfglrxdrm.so
-%{_libdir}/xorg/modules/extensions/catalyst/
+%{atixorgdir}/
 %{_libdir}/xorg/modules/*.so
 %{_prefix}/lib/libAMDXvBA.cap
 # /no_multilib
@@ -380,12 +426,19 @@ fi ||:
 %{_datadir}/icons/*
 %{_mandir}/man[1-9]/atieventsd.*
 
+# For update-alternatives
+%ghost %{_sysconfdir}/X11/xorg.conf.d/00-gfx.conf
+
 %files libs
 %defattr(-,root,root,-)
-%config %{_sysconfdir}/ld.so.conf.d/catalyst-%{_lib}.conf
 %dir %{atilibdir}
 %{atilibdir}/*.so*
 %{_libdir}/dri/
+
+# For update-alternatives
+%ghost %{_sysconfdir}/ld.so.conf.d/fglrx-%{_lib}.conf
+%{_datadir}/fglrx/fglrx-%{_lib}.conf
+%dir %{_datadir}/fglrx/
 
 %files devel
 %defattr(-,root,root,-)
@@ -403,6 +456,9 @@ fi ||:
 
 
 %changelog
+* Fri May 03 2013 Xiao-Long Chen <chenxiaolong@cxl.epac.to> - 13.1-1.hybridgfx.1
+- Add hackish support for hybrid graphics using alternatives
+
 * Sun Jan 20 2013 Leigh Scott <leigh123linux@googlemail.com> - 13.1-1
 - Update to Catalyst 13.1 (internal version 9.012)
 
